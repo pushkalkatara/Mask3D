@@ -6,6 +6,9 @@ from fire import Fire
 from natsort import natsorted
 from loguru import logger
 
+import sys
+sys.path.append('/home/pkatara/Mask3D')
+
 from datasets.preprocessing.base_preprocessing import BasePreprocessing
 from utils.point_cloud_utils import load_ply_with_normals
 
@@ -40,7 +43,7 @@ class ScannetPreprocessing(BasePreprocessing):
                 # -1 because the last one is always empty
                 split_file = f.read().split("\n")[:-1]
 
-            scans_folder = "scans_test" if mode == "test" else "scans"
+            scans_folder = "scans" if mode == "test" else "scans"
             filepaths = []
             for scene in split_file:
                 filepaths.append(

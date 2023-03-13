@@ -12,6 +12,8 @@ from models.modules.helpers_3detr import GenericMLP
 from torch_scatter import scatter_mean, scatter_max, scatter_min
 from torch.cuda.amp import autocast
 
+import ipdb
+st = ipdb.set_trace
 
 class Mask3D(nn.Module):
     def __init__(self, config, hidden_dim, num_queries, num_heads, dim_feedforward,
@@ -220,7 +222,11 @@ class Mask3D(nn.Module):
         if self.train_on_segments:
             mask_segments = []
             for i, mask_feature in enumerate(mask_features.decomposed_features):
-                mask_segments.append(self.scatter_fn(mask_feature, point2segment[i], dim=0))
+                print("mask feature:", mask_feature.shape)
+                print("point2seg shape:", point2segment[i].shape)
+                after_scatter = self.scatter_fn(mask_feature, point2segment[i], dim=0)
+                print("after scatter shape: ", after_scatter.shape)
+                mask_segments.append(after_scatter)
 
         sampled_coords = None
 
@@ -416,7 +422,8 @@ class Mask3D(nn.Module):
             output_segments = []
             for i in range(len(mask_segments)):
                 output_segments.append(mask_segments[i] @ mask_embed[i].T)
-                output_masks.append(output_segments[-1][point2segment[i]])
+                recover_mask = output_segments[-1][point2segment[i]]
+                output_masks.append(recover_mask)
         else:
             for i in range(mask_features.C[-1, 0] + 1):
                 output_masks.append(mask_features.decomposed_features[i] @ mask_embed[i].T)

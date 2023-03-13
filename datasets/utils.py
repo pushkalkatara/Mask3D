@@ -265,9 +265,11 @@ def voxelize(batch, ignore_label, voxel_size, probing, mode, task,
         if "labels" in input_dict:
             for i in range(len(input_dict["labels"])):
                 # TODO BIGGER CHANGE CHECK!!!
-                _, ret_index, ret_inv = np.unique(input_dict["labels"][i][:, -1], return_index=True, return_inverse=True)
+                segment_indices = input_dict["labels"][i][:, -1]
+                _, ret_index, ret_inv = np.unique(segment_indices, return_index=True, return_inverse=True)
                 input_dict["labels"][i][:, -1] = torch.from_numpy(ret_inv)
-                input_dict["segment2label"].append(input_dict["labels"][i][ret_index][:, :-1])
+                segment2label = input_dict["labels"][i][ret_index][:, :-1]
+                input_dict["segment2label"].append(segment2label)
 
     if "labels" in input_dict:
         list_labels = input_dict["labels"]
@@ -360,7 +362,8 @@ def get_instance_masks(list_labels, task, list_segments=None, ignore_class_thres
 
             if list_segments:
                 segment_mask = torch.zeros(list_segments[batch_id].shape[0]).bool()
-                segment_mask[list_labels[batch_id][list_labels[batch_id][:, 1] == instance_id][:, 2].unique()] = True
+                list_labels_ids = list_labels[batch_id][list_labels[batch_id][:, 1] == instance_id][:, 2].unique()
+                segment_mask[list_labels_ids] = True
                 segment_masks.append(segment_mask)
 
         if len(label_ids) == 0:

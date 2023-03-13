@@ -25,6 +25,8 @@ import colorsys
 from typing import List, Tuple
 import functools
 
+import ipdb
+st = ipdb.set_trace
 
 @functools.lru_cache(20)
 def get_evenly_distributed_colors(count: int) -> List[Tuple[np.uint8, np.uint8, np.uint8]]:
@@ -86,6 +88,7 @@ class InstanceSegmentation(pl.LightningModule):
         self.iou = IoU()
         # misc
         self.labels_info = dict()
+        self.config.general.save_visualizations = True
 
     def forward(self, x, point2segment=None, raw_coordinates=None, is_eval=False):
         with self.optional_freeze():
@@ -167,6 +170,11 @@ class InstanceSegmentation(pl.LightningModule):
         Path(pred_mask_path).mkdir(parents=True, exist_ok=True)
 
         file_name = file_names
+
+        np.save(f'/projects/katefgroup/language_grounding/mask3d_eval_outputs/{file_name}/pred_masks.npy', pred_masks)
+        np.save(f'/projects/katefgroup/language_grounding/mask3d_eval_outputs/{file_name}/pred_labels.npy', pred_classes)
+        np.save(f'/projects/katefgroup/language_grounding/mask3d_eval_outputs/{file_name}/pred_scores.npy', scores)
+
         with open(f"{base_path}/{file_name}.txt", "w") as fout:
             real_id = -1
             for instance_id in range(len(pred_classes)):
@@ -193,13 +201,15 @@ class InstanceSegmentation(pl.LightningModule):
                             sort_scores_values, point_size=20, sorted_heatmaps=None,
                             query_pos=None, backbone_features=None):
 
-        full_res_coords -= full_res_coords.mean(axis=0)
+        #full_res_coords -= full_res_coords.mean(axis=0)
 
         gt_pcd_pos = []
         gt_pcd_normals = []
         gt_pcd_color = []
         gt_inst_pcd_color = []
         gt_boxes = []
+        gt_masks = []
+        gt_labels = []
 
         if 'labels' in target_full:
             instances_colors = torch.from_numpy(
@@ -213,6 +223,9 @@ class InstanceSegmentation(pl.LightningModule):
 
                 if len(mask_coords) == 0:
                     continue
+                    
+                gt_masks.append(mask_tmp.astype(bool))
+                gt_labels.append(label)
 
                 gt_pcd_pos.append(mask_coords)
                 mask_coords_min = full_res_coords[mask_tmp.astype(bool), :].min(axis=0)
@@ -268,6 +281,9 @@ class InstanceSegmentation(pl.LightningModule):
         pred_normals = []
         pred_sem_color = []
         pred_inst_color = []
+        pred_masks = []
+        pred_labels = []
+        pred_scores = []
 
         for did in range(len(sorted_masks)):
             instances_colors = torch.from_numpy(
@@ -286,6 +302,10 @@ class InstanceSegmentation(pl.LightningModule):
 
                 pred_coords.append(mask_coords)
                 pred_normals.append(mask_normals)
+
+                pred_masks.append(sorted_masks[did][:,i].astype(bool))
+                pred_labels.append(label)
+                pred_scores.append(sort_scores_values[did][i])
 
                 pred_sem_color.append(
                     self.validation_dataset.map2color([label]).repeat(
@@ -315,7 +335,15 @@ class InstanceSegmentation(pl.LightningModule):
                              alpha=0.8,
                              point_size=point_size)
 
-        v.save(f"{self.config['general']['save_dir']}/visualizations/{file_name}")
+        #v.save(f"{self.config['general']['save_dir']}/visualizations/{file_name}")
+        Path(f"/projects/katefgroup/language_grounding/mask3d_eval_outputs/{file_name}").mkdir(exist_ok=True)
+        np.save(f'/projects/katefgroup/language_grounding/mask3d_eval_outputs/{file_name}/full_res_coords.npy', full_res_coords)
+        np.save(f'/projects/katefgroup/language_grounding/mask3d_eval_outputs/{file_name}/original_colors.npy', original_colors)
+        np.save(f'/projects/katefgroup/language_grounding/mask3d_eval_outputs/{file_name}/gt_masks.npy', gt_masks)
+        np.save(f'/projects/katefgroup/language_grounding/mask3d_eval_outputs/{file_name}/gt_labels.npy', gt_labels)
+        #np.save(f'/projects/katefgroup/language_grounding/mask3d_eval_outputs/{file_name}/pred_masks.npy', pred_masks)
+        #np.save(f'/projects/katefgroup/language_grounding/mask3d_eval_outputs/{file_name}/pred_labels.npy', pred_labels)
+        #np.save(f'/projects/katefgroup/language_grounding/mask3d_eval_outputs/{file_name}/pred_scores.npy', pred_scores)
 
     def eval_step(self, batch, batch_idx):
         data, target, file_names = batch

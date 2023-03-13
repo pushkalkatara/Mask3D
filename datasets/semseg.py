@@ -230,6 +230,8 @@ class SemanticSegmentationDataset(Dataset):
             )
         # mandatory color augmentation
         if add_colors:
+            color_mean = (0.47793125906962, 0.4303257521323044, 0.3749598901421883)
+            color_std = (0.2834475483823543, 0.27566157565723015, 0.27018971370874995)
             self.normalize_color = A.Normalize(mean=color_mean, std=color_std)
 
         self.cache_data = cache_data

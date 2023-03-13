@@ -17,6 +17,9 @@ from detectron2.projects.point_rend.point_features import (
 
 from models.misc import is_dist_avail_and_initialized, nested_tensor_from_tensor_list
 
+import ipdb
+st = ipdb.set_trace
+
 
 def dice_loss(
         inputs: torch.Tensor,
