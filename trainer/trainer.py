@@ -25,6 +25,8 @@ import colorsys
 from typing import List, Tuple
 import functools
 
+import ipdb 
+st = ipdb.set_trace
 
 @functools.lru_cache(20)
 def get_evenly_distributed_colors(count: int) -> List[Tuple[np.uint8, np.uint8, np.uint8]]:
@@ -708,7 +710,9 @@ class InstanceSegmentation(pl.LightningModule):
         root_path = f"eval_output"
         base_path = f"{root_path}/instance_evaluation_{self.config.general.experiment_name}_{self.current_epoch}"
 
-        if self.validation_dataset.dataset_name in ["scannet", "stpls3d", "scannet200"]:
+        st()
+        print(self.validation_dataset.dataset_name)
+        if self.validation_dataset.dataset_name in ["scannet", "stpls3d", "scannet200", "scannet_chunk"]:
             gt_data_path = f"{self.validation_dataset.data_dir[0]}/instance_gt/{self.validation_dataset.mode}"
         else:
             gt_data_path = f"{self.validation_dataset.data_dir[0]}/instance_gt/Area_{self.config.general.area}"

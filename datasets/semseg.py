@@ -82,7 +82,7 @@ class SemanticSegmentationDataset(Dataset):
         self.is_elastic_distortion = is_elastic_distortion
         self.color_drop = color_drop
 
-        if self.dataset_name == "scannet":
+        if self.dataset_name == "scannet" or self.dataset_name == "scannet_chunk":
             self.color_map = SCANNET_COLOR_MAP_20
             self.color_map[255] = (255, 255, 255)
         elif self.dataset_name == "stpls3d":
@@ -211,7 +211,10 @@ class SemanticSegmentationDataset(Dataset):
         elif len(color_mean_std[0]) == 3 and len(color_mean_std[1]) == 3:
             color_mean, color_std = color_mean_std[0], color_mean_std[1]
         else:
-            logger.error("pass mean and std as tuple of tuples, or as an .yaml file")
+            # scannet default
+            color_mean = (0.47793125906962, 0.4303257521323044, 0.3749598901421883)
+            color_std = (0.2834475483823543, 0.27566157565723015, 0.27018971370874995)
+            #logger.error("pass mean and std as tuple of tuples, or as an .yaml file")
 
         # augmentations
         self.volume_augmentations = V.NoOp()
@@ -539,8 +542,11 @@ class SemanticSegmentationDataset(Dataset):
                 features = np.hstack((features, coordinates))
 
         #if self.task != "semantic_segmentation":
+        # commenting for now, not sure why mask3d do this
+        '''
         if self.data[idx]['raw_filepath'].split("/")[-2] in ['scene0636_00', 'scene0154_00']:
             return self.__getitem__(0)
+        '''
 
         if self.dataset_name == "s3dis":
             return coordinates, features, labels, self.data[idx]['area'] + "_" + self.data[idx]['scene'],\
@@ -553,7 +559,7 @@ class SemanticSegmentationDataset(Dataset):
             return coordinates, features, labels, self.data[idx]['scene'], \
                    raw_color, raw_normals, raw_coordinates, idx
         else:
-            return coordinates, features, labels, self.data[idx]['raw_filepath'].split("/")[-2], \
+            return coordinates, features, labels, self.data[idx]['instance_gt_filepath'].split("/")[-1].replace('.txt', ''), \
                    raw_color, raw_normals, raw_coordinates, idx
 
     @property
