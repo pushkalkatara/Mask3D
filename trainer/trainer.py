@@ -24,6 +24,7 @@ import random
 import colorsys
 from typing import List, Tuple
 import functools
+import h5py
 
 import ipdb
 st = ipdb.set_trace
@@ -89,6 +90,9 @@ class InstanceSegmentation(pl.LightningModule):
         # misc
         self.labels_info = dict()
         self.config.general.save_visualizations = True
+
+        self.f = h5py.File("/projects/katefgroup/language_grounding/mask3d_eval_outputs.hdf5", "r+")
+        self.scene_data = {}
 
     def forward(self, x, point2segment=None, raw_coordinates=None, is_eval=False):
         with self.optional_freeze():
@@ -171,10 +175,23 @@ class InstanceSegmentation(pl.LightningModule):
 
         file_name = file_names
 
-        np.save(f'/projects/katefgroup/language_grounding/mask3d_eval_outputs/{file_name}/pred_masks.npy', pred_masks)
-        np.save(f'/projects/katefgroup/language_grounding/mask3d_eval_outputs/{file_name}/pred_labels.npy', pred_classes)
-        np.save(f'/projects/katefgroup/language_grounding/mask3d_eval_outputs/{file_name}/pred_scores.npy', scores)
+        #self.scene_data['mask3d_pred_masks'] = pred_masks
+        #self.scene_data['mask3d_pred_labels'] = pred_classes
+        #self.scene_data['mask3d_pred_scores'] = scores
 
+        # check if group exists:
+        if file_name in self.f:
+            del self.f[file_name]
+
+        grp = self.f.create_group(file_name)
+        for dset_name in self.scene_data:
+            dset = grp.create_dataset(dset_name, data = self.scene_data[dset_name])
+        
+        self.scene_data = {}
+        #np.save(f'/projects/katefgroup/language_grounding/mask3d_eval_outputs/{file_name}/pred_masks.npy', pred_masks)
+        #np.save(f'/projects/katefgroup/language_grounding/mask3d_eval_outputs/{file_name}/pred_labels.npy', pred_classes)
+        #np.save(f'/projects/katefgroup/language_grounding/mask3d_eval_outputs/{file_name}/pred_scores.npy', scores)
+        '''
         with open(f"{base_path}/{file_name}.txt", "w") as fout:
             real_id = -1
             for instance_id in range(len(pred_classes)):
@@ -187,6 +204,7 @@ class InstanceSegmentation(pl.LightningModule):
                     # reduce the export size a bit. I guess no performance difference
                     np.savetxt(f"{pred_mask_path}/{file_name}_{real_id}.txt", mask, fmt="%d")
                     fout.write(f"pred_mask/{file_name}_{real_id}.txt {pred_class} {score}\n")
+        '''
 
     def training_epoch_end(self, outputs):
         train_loss = sum([out["loss"].cpu().item() for out in outputs]) / len(outputs)
@@ -336,11 +354,16 @@ class InstanceSegmentation(pl.LightningModule):
                              point_size=point_size)
 
         #v.save(f"{self.config['general']['save_dir']}/visualizations/{file_name}")
-        Path(f"/projects/katefgroup/language_grounding/mask3d_eval_outputs/{file_name}").mkdir(exist_ok=True)
-        np.save(f'/projects/katefgroup/language_grounding/mask3d_eval_outputs/{file_name}/full_res_coords.npy', full_res_coords)
-        np.save(f'/projects/katefgroup/language_grounding/mask3d_eval_outputs/{file_name}/original_colors.npy', original_colors)
-        np.save(f'/projects/katefgroup/language_grounding/mask3d_eval_outputs/{file_name}/gt_masks.npy', gt_masks)
-        np.save(f'/projects/katefgroup/language_grounding/mask3d_eval_outputs/{file_name}/gt_labels.npy', gt_labels)
+        #Path(f"/projects/katefgroup/language_grounding/mask3d_eval_outputs/{file_name}").mkdir(exist_ok=True)
+
+        self.scene_data['mask3d_full_coords'] = full_res_coords
+        self.scene_data['mask3d_full_colors'] = original_colors
+        self.scene_data['mask3d_gt_masks'] = gt_masks
+        self.scene_data['mask3d_gt_labels'] = gt_labels
+        #np.save(f'/projects/katefgroup/language_grounding/mask3d_eval_outputs/{file_name}/full_res_coords.npy', full_res_coords)
+        #np.save(f'/projects/katefgroup/language_grounding/mask3d_eval_outputs/{file_name}/original_colors.npy', original_colors)
+        #np.save(f'/projects/katefgroup/language_grounding/mask3d_eval_outputs/{file_name}/gt_masks.npy', gt_masks)
+        #np.save(f'/projects/katefgroup/language_grounding/mask3d_eval_outputs/{file_name}/gt_labels.npy', gt_labels)
         #np.save(f'/projects/katefgroup/language_grounding/mask3d_eval_outputs/{file_name}/pred_masks.npy', pred_masks)
         #np.save(f'/projects/katefgroup/language_grounding/mask3d_eval_outputs/{file_name}/pred_labels.npy', pred_labels)
         #np.save(f'/projects/katefgroup/language_grounding/mask3d_eval_outputs/{file_name}/pred_scores.npy', pred_scores)
