@@ -12,6 +12,8 @@ from models.modules.helpers_3detr import GenericMLP
 from torch_scatter import scatter_mean, scatter_max, scatter_min
 from torch.cuda.amp import autocast
 
+import ipdb
+st = ipdb.set_trace
 
 class Mask3D(nn.Module):
     def __init__(self, config, hidden_dim, num_queries, num_heads, dim_feedforward,
