@@ -348,7 +348,7 @@ class InstanceSegmentation(pl.LightningModule):
 
         try:
             output = self.forward(data,
-                                  point2segment=[target[i]['point2segment'] for i in range(len(target))],
+                                  #point2segment=[target[i]['point2segment'] for i in range(len(target))],
                                   raw_coordinates=raw_coordinates,
                                   is_eval=True)
         except RuntimeError as run_err:
@@ -404,7 +404,7 @@ class InstanceSegmentation(pl.LightningModule):
     def test_step(self, batch, batch_idx):
         return self.eval_step(batch, batch_idx)
 
-    def get_full_res_mask(self, mask, inverse_map, point2segment_full, is_heatmap=False):
+    def get_full_res_mask(self, mask, inverse_map, point2segment_full=None, is_heatmap=False):
         mask = mask.detach().cpu()[inverse_map]  # full res
 
         if self.eval_on_segments and is_heatmap==False:
@@ -508,24 +508,26 @@ class InstanceSegmentation(pl.LightningModule):
 
                 masks = self.get_full_res_mask(masks,
                                                inverse_maps[bid],
-                                               target_full_res[bid]['point2segment'])
+                                               #target_full_res[bid]['point2segment']
+                                               )
 
                 heatmap = self.get_full_res_mask(heatmap,
                                                  inverse_maps[bid],
-                                                 target_full_res[bid]['point2segment'],
+                                                 #target_full_res[bid]['point2segment'],
                                                  is_heatmap=True)
 
                 if backbone_features is not None:
                     backbone_features = self.get_full_res_mask(torch.from_numpy(backbone_features),
                                                                inverse_maps[bid],
-                                                               target_full_res[bid]['point2segment'],
+                                                               #target_full_res[bid]['point2segment'],
                                                                is_heatmap=True)
                     backbone_features = backbone_features.numpy()
             else:
                 assert False,  "not tested"
                 masks = self.get_full_res_mask(prediction[self.decoder_id]['pred_masks'][bid].cpu(),
                                                inverse_maps[bid],
-                                               target_full_res[bid]['point2segment'])
+                                               #target_full_res[bid]['point2segment']
+                                               )
 
                 scores, masks, classes, heatmap = self.get_mask_and_scores(
                     prediction[self.decoder_id]['pred_logits'][bid].cpu(),

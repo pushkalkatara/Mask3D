@@ -346,12 +346,20 @@ class SemanticSegmentationDataset(Dataset):
             inds = self.random_cuboid(points)
             points = points[inds]
 
+        # coordinates, color, normals, segments, labels = (
+        #     points[:, :3],
+        #     points[:, 3:6],
+        #     points[:, 6:9],
+        #     points[:, 9],
+        #     points[:, 10:12],
+        # )
+
         coordinates, color, normals, segments, labels = (
             points[:, :3],
             points[:, 3:6],
-            points[:, 6:9],
-            points[:, 9],
-            points[:, 10:12],
+            points[:, 3:6], # we dont use normals as features.
+            points[:, 7],
+            points[:, 7:9],
         )
 
         raw_coordinates = coordinates.copy()

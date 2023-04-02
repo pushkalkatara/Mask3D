@@ -296,21 +296,21 @@ def voxelize(batch, ignore_label, voxel_size, probing, mode, task,
                     })
             else:
                 target = get_instance_masks(list_labels,
-                                            list_segments=input_dict["segment2label"],
+                                            #list_segments=input_dict["segment2label"],
                                             task=task,
                                             ignore_class_threshold=ignore_class_threshold,
                                             filter_out_classes=filter_out_classes,
                                             label_offset=label_offset)
-                for i in range(len(target)):
-                    target[i]["point2segment"] = input_dict["labels"][i][:, 2]
+                #for i in range(len(target)):
+                #    target[i]["point2segment"] = input_dict["labels"][i][:, 2]
                 if "train" not in mode:
                     target_full = get_instance_masks([torch.from_numpy(l) for l in original_labels],
                                                      task=task,
                                                      ignore_class_threshold=ignore_class_threshold,
                                                      filter_out_classes=filter_out_classes,
                                                      label_offset=label_offset)
-                    for i in range(len(target_full)):
-                        target_full[i]["point2segment"] = torch.from_numpy(original_labels[i][:, 2]).long()
+                    #for i in range(len(target_full)):
+                    #    target_full[i]["point2segment"] = torch.from_numpy(original_labels[i][:, 2]).long()
     else:
         target = []
         target_full = []
