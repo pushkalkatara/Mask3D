@@ -21,6 +21,10 @@ import yaml
 from torch.utils.data import Dataset
 from datasets.scannet200.scannet200_constants import SCANNET_COLOR_MAP_200, SCANNET_COLOR_MAP_20
 
+from detectron2.data import DatasetCatalog
+from datasets.scannet_2d.scannet_2d_dataloader import ScannetDatasetMapper as Scannet2DDatasetMapper
+from datasets.scannet_2d.utils import convert_2d_to_3d
+
 logger = logging.getLogger(__name__)
 
 
@@ -73,7 +77,10 @@ class SemanticSegmentationDataset(Dataset):
         label_offset=0,
         add_clip=False,
         is_elastic_distortion=True,
-        color_drop=0.0
+        color_drop=0.0,
+        # scannet 2d dataloder flags
+        frame_left: int = 2,
+        frame_right: int = 2,
     ):
         assert task in ["instance_segmentation", "semantic_segmentation"], "unknown task"
 
@@ -82,7 +89,7 @@ class SemanticSegmentationDataset(Dataset):
         self.is_elastic_distortion = is_elastic_distortion
         self.color_drop = color_drop
 
-        if self.dataset_name == "scannet":
+        if self.dataset_name == "scannet" or self.dataset_name == "scannet_2d":
             self.color_map = SCANNET_COLOR_MAP_20
             self.color_map[255] = (255, 255, 255)
         elif self.dataset_name == "stpls3d":
@@ -173,11 +180,24 @@ class SemanticSegmentationDataset(Dataset):
         self._data = []
         for database_path in self.data_dir:
             database_path = Path(database_path)
-            if self.dataset_name != "s3dis":
+            if self.dataset_name != "s3dis" and self.dataset_name != "scannet_2d":
                 if not (database_path / f"{mode}_database.yaml").exists():
                     print(f"generate {database_path}/{mode}_database.yaml first")
                     exit()
                 self._data.extend(self._load_yaml(database_path / f"{mode}_database.yaml"))
+            elif self.dataset_name == "scannet_2d":
+                self._data = DatasetCatalog.get(f"scannet_context_instance_{mode}_100k")
+                self.dataset_mapper = Scannet2DDatasetMapper(
+                    is_train=self.mode,
+                    dataset_name=f"scannet_context_instance_{mode}_100k",
+                    image_format="RGB",
+                    decoder_3d=True,
+                    inpaint_depth=True,
+                    use_instance_mask=True,
+                    frame_left=frame_left,
+                    frame_right=frame_right,
+                    num_classes=num_labels
+                )
             else:
                 mode_s3dis = f"Area_{self.area}"
                 if self.mode == "train":
@@ -211,7 +231,9 @@ class SemanticSegmentationDataset(Dataset):
         elif len(color_mean_std[0]) == 3 and len(color_mean_std[1]) == 3:
             color_mean, color_std = color_mean_std[0], color_mean_std[1]
         else:
-            logger.error("pass mean and std as tuple of tuples, or as an .yaml file")
+            color_mean = (0.47793125906962, 0.4303257521323044, 0.3749598901421883)
+            color_std = (0.2834475483823543, 0.27566157565723015, 0.27018971370874995)
+            #logger.error("pass mean and std as tuple of tuples, or as an .yaml file")
 
         # augmentations
         self.volume_augmentations = V.NoOp()
@@ -337,7 +359,11 @@ class SemanticSegmentationDataset(Dataset):
             points = self.data[idx]['data']
         else:
             assert not self.on_crops, "you need caching if on crops"
-            points = np.load(self.data[idx]["filepath"].replace("../../", ""))
+            if self.dataset_name == "scannet_2d":
+                video_data = self.dataset_mapper(self.data[idx])
+                points = convert_2d_to_3d(video_data)
+            else:
+                points = np.load(self.data[idx]["filepath"].replace("../../", ""))
 
         if "train" in self.mode and self.dataset_name in ["s3dis", "stpls3d"]:
             inds = self.random_cuboid(points)
