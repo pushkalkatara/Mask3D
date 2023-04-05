@@ -5,7 +5,9 @@ import pandas as pd
 from fire import Fire
 from natsort import natsorted
 from loguru import logger
+import sys
 
+sys.path.append('/home/pkatara/Mask3D')
 from datasets.preprocessing.base_preprocessing import BasePreprocessing
 from utils.point_cloud_utils import load_ply_with_normals
 
@@ -17,7 +19,7 @@ class ScannetPreprocessing(BasePreprocessing):
             self,
             data_dir: str = "./data/raw/scannet/scannet",
             save_dir: str = "./data/processed/scannet",
-            modes: tuple = ("train", "validation", "test"),
+            modes: tuple = ("validation",),
             n_jobs: int = -1,
             git_repo: str = "./data/raw/scannet/ScanNet",
             scannet200: bool = False

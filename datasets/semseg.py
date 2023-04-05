@@ -79,8 +79,8 @@ class SemanticSegmentationDataset(Dataset):
         is_elastic_distortion=True,
         color_drop=0.0,
         # scannet 2d dataloder flags
-        frame_left: int = 2,
-        frame_right: int = 2,
+        frame_left: int = 1,
+        frame_right: int = 1,
     ):
         assert task in ["instance_segmentation", "semantic_segmentation"], "unknown task"
 
@@ -361,7 +361,7 @@ class SemanticSegmentationDataset(Dataset):
             assert not self.on_crops, "you need caching if on crops"
             if self.dataset_name == "scannet_2d":
                 video_data = self.dataset_mapper(self.data[idx])
-                points = convert_2d_to_3d(video_data)
+                points, valids = convert_2d_to_3d(video_data)
             else:
                 points = np.load(self.data[idx]["filepath"].replace("../../", ""))
 
@@ -565,8 +565,9 @@ class SemanticSegmentationDataset(Dataset):
                 features = np.hstack((features, coordinates))
 
         #if self.task != "semantic_segmentation":
-        if self.data[idx]['raw_filepath'].split("/")[-2] in ['scene0636_00', 'scene0154_00']:
-            return self.__getitem__(0)
+        if not self.dataset_name == "scannet_2d":
+            if self.data[idx]['raw_filepath'].split("/")[-2] in ['scene0636_00', 'scene0154_00']:
+                return self.__getitem__(0)
 
         if self.dataset_name == "s3dis":
             return coordinates, features, labels, self.data[idx]['area'] + "_" + self.data[idx]['scene'],\
@@ -579,8 +580,12 @@ class SemanticSegmentationDataset(Dataset):
             return coordinates, features, labels, self.data[idx]['scene'], \
                    raw_color, raw_normals, raw_coordinates, idx
         else:
-            return coordinates, features, labels, self.data[idx]['raw_filepath'].split("/")[-2], \
-                   raw_color, raw_normals, raw_coordinates, idx
+            if self.dataset_name == "scannet_2d":
+                return coordinates, features, labels, self.data[idx]['file_name'].split("/")[-3], \
+                    raw_color, raw_normals, raw_coordinates, idx, valids
+            else:
+                return coordinates, features, labels, self.data[idx]['raw_filepath'].split("/")[-2], \
+                    raw_color, raw_normals, raw_coordinates, idx
 
     @property
     def data(self):

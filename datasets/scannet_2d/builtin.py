@@ -32,7 +32,7 @@ _PREDEFINED_SPLITS_CONTEXT_SCANNET_100K = {
         # "scannet_train.coco.json"
         # "scannet_train.coco.json"
     ),
-    "scannet_context_instance_val_100k": (
+    "scannet_context_instance_validation_100k": (
         "frames_square",
         #"scannet_val_valid.coco.json"
         "scannet_two_scene_valid.coco.json"

@@ -83,8 +83,7 @@ def _get_dummy_anno(num_classes):
         "segmentation": [np.array([0.0] * 6)]
     }
 
-
-def build_transform_gen(cfg, is_train):
+def build_transform_gen(is_train):
     """
     Create a list of default :class:`Augmentation` from config.
     Now it includes resizing and flipping.
@@ -92,21 +91,12 @@ def build_transform_gen(cfg, is_train):
         list[Augmentation]
     """
     if is_train:
-        image_size = cfg.INPUT.IMAGE_SIZE
-        min_scale = cfg.INPUT.MIN_SCALE
-        max_scale = cfg.INPUT.MAX_SCALE
+        image_size = 512
+        min_scale = 0.1
+        max_scale = 0.1
 
         augmentation = []
         depth_augmentation = None
-
-        if cfg.INPUT.RANDOM_FLIP != "none":
-            assert cfg.MODEL.DECODER_3D == False, "Random flip is not supported for 3D"
-            augmentation.append(
-                T.RandomFlip(
-                    horizontal=cfg.INPUT.RANDOM_FLIP == "horizontal",
-                    vertical=cfg.INPUT.RANDOM_FLIP == "vertical",
-                )
-            )
 
         augmentation.extend([
             T.ResizeScale(
@@ -117,7 +107,7 @@ def build_transform_gen(cfg, is_train):
     else:
         augmentation = [
             T.ResizeShortestEdge(
-                cfg.INPUT.MIN_SIZE_TEST, cfg.INPUT.MAX_SIZE_TEST, cfg.INPUT.MIN_SIZE_TEST_SAMPLING
+                320, 320, "choice"
             ),
         ]
         depth_augmentation = None
@@ -152,6 +142,9 @@ class ScannetDatasetMapper:
         mode = "training" if is_train else "inference"
 
         self.context_dataset_dicts = DatasetCatalog.get(dataset_name)
+
+        #self.tfm_gens = build_transform_gen(is_train)
+        self.tfm_gens = []
 
     def get_current_image_id(self, dataset_dict, context):
         idx = None
@@ -316,14 +309,8 @@ class ScannetDatasetMapper:
                 # depth_aug_input, depth_transforms = T.apply_transform_gens(self.depth_tfm_gems, depth_aug_input)
                 # depth = depth_aug_input.image
                 pose = np.loadtxt(pose_file_names[frame_idx])
-                try:
-                    valid = np.load(valid_file_names[frame_idx])
-                    segment = np.load(segment_file_names[frame_idx])
-                except:
-                    valid = np.ones_like(depth)
-                    # nor idea if we take ones like segments.
-                    # check what scenes are going in this except
-                    segment = np.ones_like(depth)
+                valid = np.load(valid_file_names[frame_idx])
+                segment = np.load(segment_file_names[frame_idx])
 
             # NOTE copy() is to prevent annotations getting changed from applying augmentations
             _frame_annos = []

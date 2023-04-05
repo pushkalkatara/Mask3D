@@ -25,6 +25,8 @@ import colorsys
 from typing import List, Tuple
 import functools
 
+import ipdb
+st = ipdb.set_trace
 
 @functools.lru_cache(20)
 def get_evenly_distributed_colors(count: int) -> List[Tuple[np.uint8, np.uint8, np.uint8]]:
@@ -36,6 +38,8 @@ def get_evenly_distributed_colors(count: int) -> List[Tuple[np.uint8, np.uint8, 
 class RegularCheckpointing(pl.Callback):
     def on_train_epoch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"):
         general = pl_module.config.general
+        #current_epoch = pl_module.current_epoch
+        #trainer.save_checkpoint(f"{general.save_dir}/{current_epoch}-epoch.ckpt")
         trainer.save_checkpoint(f"{general.save_dir}/last-epoch.ckpt")
         print("Checkpoint created")
 
@@ -325,6 +329,7 @@ class InstanceSegmentation(pl.LightningModule):
         data_idx = data.idx
         original_normals = data.original_normals
         original_coordinates = data.original_coordinates
+        valids = data.valids
 
         #if len(target) == 0 or len(target_full) == 0:
         #    print("no targets")
@@ -391,7 +396,7 @@ class InstanceSegmentation(pl.LightningModule):
             rescaled_pca = 255 * (pca_features - pca_features.min()) / (pca_features.max() - pca_features.min())
 
         self.eval_instance_step(output, target, target_full, inverse_maps, file_names, original_coordinates,
-                                original_colors, original_normals, raw_coordinates, data_idx,
+                                original_colors, original_normals, raw_coordinates, data_idx, valids,
                                 backbone_features=rescaled_pca if self.config.general.save_visualizations else None)
 
         if self.config.data.test_mode != "test":
@@ -437,8 +442,9 @@ class InstanceSegmentation(pl.LightningModule):
         return score, result_pred_mask, classes, heatmap
 
     def eval_instance_step(self, output, target_low_res, target_full_res, inverse_maps, file_names,
-                           full_res_coords, original_colors, original_normals, raw_coords, idx, first_full_res=False,
+                           full_res_coords, original_colors, original_normals, raw_coords, idx, valids, first_full_res=False,
                            backbone_features=None,):
+        
         label_offset = self.validation_dataset.label_offset
         prediction = output['aux_outputs']
         prediction.append({
@@ -618,8 +624,11 @@ class InstanceSegmentation(pl.LightningModule):
                 self.bbox_gt[file_names[bid]] = bbox_data
 
             if self.config.general.eval_inner_core == -1:
+                valid = valids[bid]
+                print(valid.shape)
+                print(all_pred_masks[bid].shape)
                 self.preds[file_names[bid]] = {
-                    'pred_masks': all_pred_masks[bid],
+                    'pred_masks': all_pred_masks[bid][valid.squeeze(), :],
                     'pred_scores': all_pred_scores[bid],
                     'pred_classes': all_pred_classes[bid]
                 }
@@ -683,7 +692,7 @@ class InstanceSegmentation(pl.LightningModule):
                     )
 
     def eval_instance_epoch_end(self):
-        log_prefix = f"val"
+        log_prefix = f"val_3d_bbox"
         ap_results = {}
 
         head_results, tail_results, common_results = [], [], []
@@ -694,28 +703,28 @@ class InstanceSegmentation(pl.LightningModule):
         mean_box_ap_25 = sum([v for k, v in box_ap_25[-1].items()]) / len(box_ap_25[-1].keys())
         mean_box_ap_50 = sum([v for k, v in box_ap_50[-1].items()]) / len(box_ap_50[-1].keys())
 
-        ap_results[f"{log_prefix}_mean_box_ap_25"] = mean_box_ap_25
-        ap_results[f"{log_prefix}_mean_box_ap_50"] = mean_box_ap_50
+        ap_results[f"{log_prefix}/AP75"] = mean_box_ap_25
+        ap_results[f"{log_prefix}/AP50"] = mean_box_ap_50
 
         for class_id in box_ap_50[-1].keys():
             class_name = self.train_dataset.label_info[class_id]['name']
-            ap_results[f"{log_prefix}_{class_name}_val_box_ap_50"] = box_ap_50[-1][class_id]
+            ap_results[f"{log_prefix}/AP50-{class_name}"] = box_ap_50[-1][class_id]
 
         for class_id in box_ap_25[-1].keys():
             class_name = self.train_dataset.label_info[class_id]['name']
-            ap_results[f"{log_prefix}_{class_name}_val_box_ap_25"] = box_ap_25[-1][class_id]
+            ap_results[f"{log_prefix}/AP75-{class_name}"] = box_ap_25[-1][class_id]
 
         root_path = f"eval_output"
         base_path = f"{root_path}/instance_evaluation_{self.config.general.experiment_name}_{self.current_epoch}"
 
-        if self.validation_dataset.dataset_name in ["scannet", "stpls3d", "scannet200"]:
+        if self.validation_dataset.dataset_name in ["scannet", "scannet_2d", "stpls3d", "scannet200"]:
             gt_data_path = f"{self.validation_dataset.data_dir[0]}/instance_gt/{self.validation_dataset.mode}"
         else:
             gt_data_path = f"{self.validation_dataset.data_dir[0]}/instance_gt/Area_{self.config.general.area}"
 
         pred_path = f"{base_path}/tmp_output.txt"
 
-        log_prefix = f"val"
+        log_prefix = f"val_3d_segm"
 
         if not os.path.exists(base_path):
             os.makedirs(base_path)
@@ -766,9 +775,9 @@ class InstanceSegmentation(pl.LightningModule):
                             else:
                                 assert(False, 'class not known!')
                     else:
-                        ap_results[f"{log_prefix}_{class_name}_val_ap"] = float(ap)
-                        ap_results[f"{log_prefix}_{class_name}_val_ap_50"] = float(ap_50)
-                        ap_results[f"{log_prefix}_{class_name}_val_ap_25"] = float(ap_25)
+                        ap_results[f"{log_prefix}/AP-{class_name}"] = float(ap)
+                        ap_results[f"{log_prefix}/AP50-{class_name}"] = float(ap_50)
+                        ap_results[f"{log_prefix}/AP75-{class_name}"] = float(ap_25)
 
             if self.validation_dataset.dataset_name == "scannet200":
                 head_results = np.stack(head_results)
@@ -799,20 +808,20 @@ class InstanceSegmentation(pl.LightningModule):
 
                 ap_results = {key: 0. if math.isnan(score) else score for key, score in ap_results.items()}
             else:
-                mean_ap = statistics.mean([item for key, item in ap_results.items() if key.endswith("val_ap")])
-                mean_ap_50 = statistics.mean([item for key, item in ap_results.items() if key.endswith("val_ap_50")])
-                mean_ap_25 = statistics.mean([item for key, item in ap_results.items() if key.endswith("val_ap_25")])
+                mean_ap = statistics.mean([item for key, item in ap_results.items() if "AP-" in key])
+                mean_ap_50 = statistics.mean([item for key, item in ap_results.items() if "AP50-" in key])
+                mean_ap_25 = statistics.mean([item for key, item in ap_results.items() if "AP75-" in key])
 
-                ap_results[f"{log_prefix}_mean_ap"] = mean_ap
-                ap_results[f"{log_prefix}_mean_ap_50"] = mean_ap_50
-                ap_results[f"{log_prefix}_mean_ap_25"] = mean_ap_25
+                ap_results[f"{log_prefix}/AP"] = mean_ap
+                ap_results[f"{log_prefix}/AP50"] = mean_ap_50
+                ap_results[f"{log_prefix}/AP75"] = mean_ap_25
 
                 ap_results = {key: 0. if math.isnan(score) else score for key, score in ap_results.items()}
         except (IndexError, OSError) as e:
             print("NO SCORES!!!")
-            ap_results[f"{log_prefix}_mean_ap"] = 0.
-            ap_results[f"{log_prefix}_mean_ap_50"] = 0.
-            ap_results[f"{log_prefix}_mean_ap_25"] = 0.
+            ap_results[f"{log_prefix}/AP"] = 0.
+            ap_results[f"{log_prefix}/AP50"] = 0.
+            ap_results[f"{log_prefix}/AP75"] = 0.
 
         self.log_dict(ap_results)
 

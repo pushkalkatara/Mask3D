@@ -1,5 +1,7 @@
 #!/bin/bash
-export OMP_NUM_THREADS=3  # speeds up MinkowskiEngine
+export OMP_NUM_THREADS=1  # speeds up MinkowskiEngine
+export CUDA_VISIBLE_DEVICES=5
+export DETECTRON2_DATASETS="/projects/katefgroup/language_grounding/SEMSEG_100k"
 
 CURR_DBSCAN=0.95
 CURR_TOPK=500
@@ -7,10 +9,10 @@ CURR_QUERY=150
 
 # TRAIN
 python main_instance_segmentation.py \
-general.experiment_name="validation" \
+general.experiment_name="2d" \
 data/datasets=scannet_2d \
-# general.eval_on_segments=true \
-# general.train_on_segments=true
+general.eval_on_segments=true \
+general.train_on_segments=true
 
 # TEST
 # python main_instance_segmentation.py \

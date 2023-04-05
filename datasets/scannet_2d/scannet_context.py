@@ -75,7 +75,12 @@ def aggregate_images_by_sceneid(image_dataset):
         img['color_intrinsics_file'] = os.path.splitext(img['file_name'])[0].replace('color', 'intrinsics_color.txt')
         img['pose_file'] = img['file_name'].replace('color', 'pose').replace('jpg', 'txt')
         img['valid_file'] = img['file_name'].replace('color', 'instance_newest').replace('jpg', 'npy')
-
+        directory, filename = os.path.split(img['file_name'])
+        file_tail = filename.split('.')[0]
+        filename = filename.replace(f'{file_tail}', f'segment_{file_tail}')
+        segment_file = os.path.join(directory, filename).replace('color', 'instance_newest').replace('jpg', 'npy')
+        img['segment_file'] = segment_file
+        #/projects/katefgroup/language_grounding/SEMSEG_100k/frames_square/scene0191_00/instance_newest/0.npy
         # add context image ids
         img['context_ids'] = get_context_records(idx, img, scenes)
 

@@ -57,7 +57,7 @@ validation_dataset:
 
 test_dataset:
   _target_: datasets.semseg.SemanticSegmentationDataset
-  dataset_name: "scannet"
+  dataset_name: "scannet_2d"
   data_dir: /projects/katefgroup/language_grounding/SEMSEG_100k
   image_augmentations_path: null
   volume_augmentations_path: null
