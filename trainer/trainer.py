@@ -80,6 +80,7 @@ class InstanceSegmentation(pl.LightningModule):
         weight_dict.update(aux_weight_dict)
 
         self.preds = dict()
+        self.gts = dict()
         self.bbox_preds = dict()
         self.bbox_gt = dict()
 
@@ -625,8 +626,6 @@ class InstanceSegmentation(pl.LightningModule):
 
             if self.config.general.eval_inner_core == -1:
                 valid = valids[bid]
-                print(valid.shape)
-                print(all_pred_masks[bid].shape)
                 self.preds[file_names[bid]] = {
                     'pred_masks': all_pred_masks[bid][valid.squeeze(), :],
                     'pred_scores': all_pred_scores[bid],

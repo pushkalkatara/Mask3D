@@ -209,7 +209,7 @@ class SemanticSegmentationDataset(Dataset):
         if data_percent < 1.0:
             self._data = sample(self._data, int(len(self._data) * data_percent))
         labels = self._load_yaml(Path(label_db_filepath))
-
+        
         # if working only on classes for validation - discard others
         self._labels = self._select_correct_labels(labels, num_labels)
 
@@ -581,7 +581,10 @@ class SemanticSegmentationDataset(Dataset):
                    raw_color, raw_normals, raw_coordinates, idx
         else:
             if self.dataset_name == "scannet_2d":
-                return coordinates, features, labels, self.data[idx]['file_name'].split("/")[-3], \
+                scene_name = self.data[idx]['file_name'].split("/")[-3]
+                file_name = self.data[idx]['file_name'].split("/")[-1].split('.')[0]
+                name = scene_name + '-' + file_name
+                return coordinates, features, labels, name, \
                     raw_color, raw_normals, raw_coordinates, idx, valids
             else:
                 return coordinates, features, labels, self.data[idx]['raw_filepath'].split("/")[-2], \

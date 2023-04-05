@@ -139,6 +139,13 @@ def convert_2d_to_3d(video_data):
     segments = torch.stack(video_data["segments"]).reshape(-1, 1).numpy()
     
     semantic_instance = target_dict["point_semantic_instance_label"].numpy().reshape(-1)
+
+    scene_name = video_data['file_name'].split('/')[-3]
+    file_name = video_data['file_name'].split("/")[-1].split('.')[0]
+    name = scene_name + '-' + file_name
+    processed_gt_filepath = '/projects/katefgroup/language_grounding/SEMSEG_100k/instance_gt/validation/' + f"{name}.txt"
+    np.savetxt(processed_gt_filepath, semantic_instance[valids.squeeze()].astype(np.int32), fmt="%d")
+
     semantic = semantic_instance // 1000
     instance =  semantic_instance % 1000
     labels = np.vstack((semantic, instance)).transpose()
