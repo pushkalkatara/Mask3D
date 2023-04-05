@@ -329,7 +329,6 @@ class InstanceSegmentation(pl.LightningModule):
         data_idx = data.idx
         original_normals = data.original_normals
         original_coordinates = data.original_coordinates
-        valids = data.valids
 
         #if len(target) == 0 or len(target_full) == 0:
         #    print("no targets")
@@ -396,7 +395,7 @@ class InstanceSegmentation(pl.LightningModule):
             rescaled_pca = 255 * (pca_features - pca_features.min()) / (pca_features.max() - pca_features.min())
 
         self.eval_instance_step(output, target, target_full, inverse_maps, file_names, original_coordinates,
-                                original_colors, original_normals, raw_coordinates, data_idx, valids,
+                                original_colors, original_normals, raw_coordinates, data_idx,
                                 backbone_features=rescaled_pca if self.config.general.save_visualizations else None)
 
         if self.config.data.test_mode != "test":
@@ -442,7 +441,7 @@ class InstanceSegmentation(pl.LightningModule):
         return score, result_pred_mask, classes, heatmap
 
     def eval_instance_step(self, output, target_low_res, target_full_res, inverse_maps, file_names,
-                           full_res_coords, original_colors, original_normals, raw_coords, idx, valids, first_full_res=False,
+                           full_res_coords, original_colors, original_normals, raw_coords, idx, first_full_res=False,
                            backbone_features=None,):
         
         label_offset = self.validation_dataset.label_offset
@@ -624,11 +623,8 @@ class InstanceSegmentation(pl.LightningModule):
                 self.bbox_gt[file_names[bid]] = bbox_data
 
             if self.config.general.eval_inner_core == -1:
-                valid = valids[bid]
-                print(valid.shape)
-                print(all_pred_masks[bid].shape)
                 self.preds[file_names[bid]] = {
-                    'pred_masks': all_pred_masks[bid][valid.squeeze(), :],
+                    'pred_masks': all_pred_masks[bid],
                     'pred_scores': all_pred_scores[bid],
                     'pred_classes': all_pred_classes[bid]
                 }

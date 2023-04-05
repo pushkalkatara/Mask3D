@@ -195,8 +195,7 @@ def batch_instances(batch):
 def voxelize(batch, ignore_label, voxel_size, probing, mode, task,
              ignore_class_threshold, filter_out_classes, label_offset, num_queries):
     (coordinates, features, labels, original_labels, inverse_maps, original_colors, original_normals,
-     original_coordinates, idx, valids) = (
-        [],
+     original_coordinates, idx) = (
         [],
         [],
         [],
@@ -223,7 +222,6 @@ def voxelize(batch, ignore_label, voxel_size, probing, mode, task,
         full_res_coords.append(sample[0])
         original_colors.append(sample[4])
         original_normals.append(sample[5])
-        valids.append(sample[8])
 
         coords = np.floor(sample[0] / voxel_size)
         voxelization_dict.update({"coordinates": torch.from_numpy(coords).to("cpu").contiguous(), "features": sample[1]})
@@ -322,7 +320,7 @@ def voxelize(batch, ignore_label, voxel_size, probing, mode, task,
     if "train" not in mode:
         return (
             NoGpu(coordinates, features, original_labels, inverse_maps, full_res_coords,
-                  target_full, original_colors, original_normals, original_coordinates, idx, valids), target,
+                  target_full, original_colors, original_normals, original_coordinates, idx), target,
             [sample[3] for sample in batch]
         )
     else:
@@ -477,7 +475,7 @@ class NoGpu:
     def __init__(
             self, coordinates, features, original_labels=None, inverse_maps=None, full_res_coords=None,
             target_full=None, original_colors=None, original_normals=None, original_coordinates=None,
-            idx=None, valids=None
+            idx=None
     ):
         """ helper class to prevent gpu loading on lightning """
         self.coordinates = coordinates
@@ -490,8 +488,6 @@ class NoGpu:
         self.original_normals = original_normals
         self.original_coordinates = original_coordinates
         self.idx = idx
-        self.valids = valids
-
 
 class NoGpuMask:
     def __init__(
