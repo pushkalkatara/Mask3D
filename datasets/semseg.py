@@ -385,7 +385,7 @@ class SemanticSegmentationDataset(Dataset):
             color = np.ones((len(color), 3))
 
         # volume and image augmentations for train
-        if "train" in self.mode or self.is_tta:
+        if ("train" in self.mode or self.is_tta) and False:
             if self.cropping:
                 new_idx = self.random_cuboid(coordinates, labels[:,1],
                                              self._remap_from_zero(labels[:, 0].copy()))

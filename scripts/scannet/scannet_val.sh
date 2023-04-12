@@ -1,6 +1,6 @@
 #!/bin/bash
 export OMP_NUM_THREADS=3  # speeds up MinkowskiEngine
-export CUDA_VISIBLE_DEVICES=7
+export CUDA_VISIBLE_DEVICES=5
 
 CURR_DBSCAN=0.95
 CURR_TOPK=500
@@ -8,7 +8,7 @@ CURR_QUERY=150
 
 # TRAIN
 python main_instance_segmentation.py \
-general.experiment_name="validation_no_aug" \
+general.experiment_name="validation_no_no_aug" \
 general.eval_on_segments=true \
 general.train_on_segments=true
 
