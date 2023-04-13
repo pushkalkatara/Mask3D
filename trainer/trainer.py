@@ -885,10 +885,10 @@ class InstanceSegmentation(pl.LightningModule):
         )
 
     def val_dataloader(self):
-        c_fn = hydra.utils.instantiate(self.config.data.validation_collation)
+        c_fn = hydra.utils.instantiate(self.config.data.train_collation)
         return hydra.utils.instantiate(
-            self.config.data.validation_dataloader,
-            self.validation_dataset,
+            self.config.data.train_dataloader,
+            self.train_dataset,
             collate_fn=c_fn,
         )
 

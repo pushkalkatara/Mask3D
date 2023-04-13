@@ -207,7 +207,8 @@ class SemanticSegmentationDataset(Dataset):
                     exit()
                 self._data.extend(self._load_yaml(database_path / f"{mode_s3dis}_database.yaml"))
         if data_percent < 1.0:
-            self._data = sample(self._data, int(len(self._data) * data_percent))
+            self._data = self._data[:30]
+            #self._data = sample(self._data, int(len(self._data) * data_percent))
         labels = self._load_yaml(Path(label_db_filepath))
 
         # if working only on classes for validation - discard others
