@@ -8,10 +8,11 @@ CURR_QUERY=150
 
 # TRAIN
 python main_instance_segmentation.py \
-general.experiment_name="validation_overfit_2" \
+general.experiment_name="validation_overfit_3" \
 general.eval_on_segments=true \
 general.train_on_segments=true \
-data.train_mode="validation"
+data.train_mode="validation" \
+trainer.max_epochs=10000 \
 
 # TEST
 # python main_instance_segmentation.py \
